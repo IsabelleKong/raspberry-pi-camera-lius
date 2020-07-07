@@ -11,9 +11,9 @@ import os
 import io
 import picamera
 import logging
-import socketserver
+#import SocketServer
 from threading import Condition
-from http import server
+#from http import server
 from picamera import PiCamera
 from time import sleep
 from signal import pause
@@ -26,20 +26,20 @@ i = 0
 
 app=Flask(__name__)
 
-@app.route('/take_photo',methods=["POST"])  
+@app.route('/take_photo',methods=["GET"])  
 def take_picture():
     global i
     i = i + 1
-    camera.capture('/home/pi/Desktop/image_%s.jp' % i)
+    camera.capture('/home/pi/Desktop/image_%s.jpeg' % i)
     return "success!"
 
-@app.route('/stop_camera',methods=["POST"])  
+@app.route('/stop_camera',methods=["GET"])  
 def stop_camera():
     camera.stop_preview()
     return "success!"
 
     
-@app.route('/start_recording',methods=["POST"])  
+@app.route('/start_recording',methods=["GET"])  
 def start_recording():
     global camIsRecording
     global i
@@ -49,9 +49,10 @@ def start_recording():
     camIsRecording = True
     return "success!"
 
-
-@app.route('/stop_recording',methods=["POST"])  
-def stop_recording():   
+@app.route('/stop_recording',methods=["GET"])  
+def stop_recording(): 
+    global camIsRecording
+   
     if camIsRecording:
         camera.stop_recording()
         camIsRecording = False
@@ -142,5 +143,5 @@ with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
 if __name__=='__main__':
     #start a new thread for the camera preview
     cameraPreview = threading.Thread(target=camera_preview, args=())
-    camera_preview.start()
+    cameraPreview.start()
     app.run()
