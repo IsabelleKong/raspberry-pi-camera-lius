@@ -1,27 +1,66 @@
+#!/usr/bin/python
+from flask import Flask
+#from flask_api import FlaskAPI 
+from picamera import PiCamera
+from time import sleep
+import RPi.GPIO as GPIO
+import time
+import threading
+import os
+
 import io
 import picamera
 import logging
 import socketserver
 from threading import Condition
 from http import server
-
 from picamera import PiCamera
 from time import sleep
 from signal import pause
 
+camera = PiCamera()
+#camera.rotation = 180
+# see if security camera is currently recording
+camIsRecording = False
+i = 0
 
+app=Flask(__name__)
+
+@app.route('/take_photo',methods=["POST"])  
 def take_picture():
     global i
     i = i + 1
     camera.capture('/home/pi/Desktop/image_%s.jp' % i)
-    print('A photo has been taken')
-    sleep(5)
+    return "success!"
 
+@app.route('/stop_camera',methods=["POST"])  
 def stop_camera():
     camera.stop_preview()
-    exit()
- 
+    return "success!"
 
+    
+@app.route('/start_recording',methods=["POST"])  
+def start_recording():
+    global camIsRecording
+    global i
+    i = i + 1
+
+    camera.start_recording('/home/pi/Desktop/video_%s.h264' % i)
+    camIsRecording = True
+    return "success!"
+
+
+@app.route('/stop_recording',methods=["POST"])  
+def stop_recording():   
+    if camIsRecording:
+        camera.stop_recording()
+        camIsRecording = False
+    return "success!"
+
+def camera_preview():
+    return
+
+'''
 class StreamingOutput(object):
     
     def __init__(self):
@@ -97,4 +136,11 @@ with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
             
     finally :
         camera.stop_recording()
-        
+ '''       
+
+
+if __name__=='__main__':
+    #start a new thread for the camera preview
+    cameraPreview = threading.Thread(target=camera_preview, args=())
+    camera_preview.start()
+    app.run()
