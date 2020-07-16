@@ -29,39 +29,30 @@ output = StreamingOutput()
 # set up GPIO settings
 GPIO.setmode(GPIO.BOARD)
 # set pin numbers
-PWMA = 
-AIN2 = 
-AIN1 =
-STBY =
-BIN2 =
-BIN1 =
-PWMB =
-CIN2 =
-CIN1 =
-PWMC = 
+PWMA = 22
+AIN2 = 18
+AIN1 = 16
+#STBY = 
+BIN2 = 21
+BIN1 = 23
+PWMB = 19
 GPIO.setup(PWMA , GPIO.OUT) # PWMA
 GPIO.setup(AIN2, GPIO.OUT) # AIN2
 GPIO.setup(AIN1, GPIO.OUT) # AIN1
-GPIO.setup(STBY, GPIO.OUT) # STBY
+#GPIO.setup(STBY, GPIO.OUT) # STBY
 GPIO.setup(BIN2, GPIO.OUT) # BIN2
 GPIO.setup(BIN1, GPIO.OUT) # BIN1
 GPIO.setup(PWMB, GPIO.OUT) # PWMB
-GPIO.setup(CIN2, GPIO.OUT) # CIN2
-GPIO.setup(CIN1, GPIO.OUT) # CIN1
-GPIO.setup(PWMC, GPIO.OUT) # PWMC
 
 
 def reset_pins():
     GPIO.output(PWMA, GPIO.LOW) # Set PWMA
     GPIO.output(AIN2, GPIO.LOW) # Set AIN2
     GPIO.output(AIN1, GPIO.LOW) # Set AIN1
-    GPIO.output(STBY, GPIO.LOW) # Set STBY
+    #GPIO.output(STBY, GPIO.LOW) # Set STBY
     GPIO.output(BIN2, GPIO.LOW) # Set BIN2
     GPIO.output(BIN1, GPIO.LOW) # Set BIN1
     GPIO.output(PWMB, GPIO.LOW) # Set PWMB
-    GPIO.output(CIN2, GPIO.LOW) # Set CIN1
-    GPIO.output(CIN1, GPIO.LOW) # Set CIN2
-    GPIO.output(PWMC, GPIO.LOW) # Set PWMC
     
 
 app=Flask(__name__)
@@ -99,7 +90,7 @@ def stop_recording():
 
 @app.route('/left',methods=["GET"])  
 def left():
-    GPIO.output(STBY, GPIO.HIGH)
+    #GPIO.output(STBY, GPIO.HIGH)
     time.sleep(5)
     reset_pins()
     return "success!"
@@ -107,7 +98,7 @@ def left():
 
 @app.route('/right',methods=["GET"])  
 def right():
-    GPIO.output(STBY, GPIO.HIGH)
+    #GPIO.output(STBY, GPIO.HIGH)
     time.sleep(5)
     reset_pins()
     return "success!"
@@ -115,7 +106,14 @@ def right():
 
 @app.route('/forward',methods=["GET"])  
 def forward():
-    GPIO.output(STBY, GPIO.HIGH)
+    #GPIO.output(STBY, GPIO.HIGH)
+    GPIO.output(AIN1,GPIO.HIGH)
+    GPIO.output(AIN2,GPIO.LOW)
+    GPIO.output(PWMA,GPIO.HIGH)
+    GPIO.output(BIN1,GPIO.HIGH)
+    GPIO.output(BIN2,GPIO.LOW)
+    GPIO.output(PWMB,GPIO.HIGH)
+    
     time.sleep(5)
     reset_pins()
     return "success!"
@@ -123,7 +121,14 @@ def forward():
 
 @app.route('/reverse',methods=["GET"])  
 def reverse():
-    GPIO.output(STBY, GPIO.HIGH)
+    #GPIO.output(STBY, GPIO.HIGH)
+    GPIO.output(AIN1,GPIO.LOW)
+    GPIO.output(AIN2,GPIO.HIGH)
+    GPIO.output(PWMA,GPIO.HIGH)
+    GPIO.output(BIN1,GPIO.LOW)
+    GPIO.output(BIN2,GPIO.HIGH)
+    GPIO.output(PWMB,GPIO.HIGH)
+    
     time.sleep(5)
     reset_pins()
     return "success!"
