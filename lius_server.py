@@ -28,9 +28,8 @@ app=Flask(__name__)
 
 @app.route('/take_photo',methods=["GET"])  
 def take_picture():
-    global i
-    i = i + 1
-    camera.capture('/home/pi/Desktop/image_%s.jpeg' % i)
+    timeStr = time.strftime("%Y%m%d-%H%M%S")
+    camera.capture('/home/pi/Desktop/image_%s.jpeg' % timeStr)
     return "success!"
 
 @app.route('/stop_camera',methods=["GET"])  
@@ -42,10 +41,9 @@ def stop_camera():
 @app.route('/start_recording',methods=["GET"])  
 def start_recording():
     global camIsRecording
-    global i
-    i = i + 1
 
-    camera.start_recording('/home/pi/Desktop/video_%s.h264' % i)
+    timeStr = time.strftime("%Y%m%d-%H%M%S")
+    camera.start_recording('/home/pi/Desktop/video_%s.h264' % timeStr)
     camIsRecording = True
     return "success!"
 
