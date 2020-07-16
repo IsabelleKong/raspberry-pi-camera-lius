@@ -22,7 +22,47 @@ camera = PiCamera()
 #camera.rotation = 180
 # see if security camera is currently recording
 camIsRecording = False
-i = 0
+# see if security camera preview is currently enabled
+camPreviewEnabled = False
+output = StreamingOutput()
+
+# set up GPIO settings
+GPIO.setmode(GPIO.BOARD)
+# set pin numbers
+PWMA = 
+AIN2 = 
+AIN1 =
+STBY =
+BIN2 =
+BIN1 =
+PWMB =
+CIN2 =
+CIN1 =
+PWMC = 
+GPIO.setup(PWMA , GPIO.OUT) # PWMA
+GPIO.setup(AIN2, GPIO.OUT) # AIN2
+GPIO.setup(AIN1, GPIO.OUT) # AIN1
+GPIO.setup(STBY, GPIO.OUT) # STBY
+GPIO.setup(BIN2, GPIO.OUT) # BIN2
+GPIO.setup(BIN1, GPIO.OUT) # BIN1
+GPIO.setup(PWMB, GPIO.OUT) # PWMB
+GPIO.setup(CIN2, GPIO.OUT) # CIN2
+GPIO.setup(CIN1, GPIO.OUT) # CIN1
+GPIO.setup(PWMC, GPIO.OUT) # PWMC
+
+
+def reset_pins():
+    GPIO.output(PWMA, GPIO.LOW) # Set PWMA
+    GPIO.output(AIN2, GPIO.LOW) # Set AIN2
+    GPIO.output(AIN1, GPIO.LOW) # Set AIN1
+    GPIO.output(STBY, GPIO.LOW) # Set STBY
+    GPIO.output(BIN2, GPIO.LOW) # Set BIN2
+    GPIO.output(BIN1, GPIO.LOW) # Set BIN1
+    GPIO.output(PWMB, GPIO.LOW) # Set PWMB
+    GPIO.output(CIN2, GPIO.LOW) # Set CIN1
+    GPIO.output(CIN1, GPIO.LOW) # Set CIN2
+    GPIO.output(PWMC, GPIO.LOW) # Set PWMC
+    
 
 app=Flask(__name__)
 
@@ -56,10 +96,67 @@ def stop_recording():
         camIsRecording = False
     return "success!"
 
+
+@app.route('/left',methods=["GET"])  
+def left():
+    GPIO.output(STBY, GPIO.HIGH)
+    time.sleep(5)
+    reset_pins()
+    return "success!"
+
+
+@app.route('/right',methods=["GET"])  
+def right():
+    GPIO.output(STBY, GPIO.HIGH)
+    time.sleep(5)
+    reset_pins()
+    return "success!"
+
+
+@app.route('/forward',methods=["GET"])  
+def forward():
+    GPIO.output(STBY, GPIO.HIGH)
+    time.sleep(5)
+    reset_pins()
+    return "success!"
+
+
+@app.route('/reverse',methods=["GET"])  
+def reverse():
+    GPIO.output(STBY, GPIO.HIGH)
+    time.sleep(5)
+    reset_pins()
+    return "success!"
+
+
+@app.route('/start_camera',methods=["GET"])  
+def start_camera():
+    global camPreviewEnabled
+
+    camPreviewEnabled = True
+    return "success!"
+
+
+@app.route('/stop_camera',methods=["GET"])  
+def stop_camera():
+    global camPreviewEnabled
+    
+    camPreviewEnabled = False
+    return "success!"
+
+
 def camera_preview():
+    camera.start_recording(output, format='mjpg')
+    address = ('', 80)
+    server = StreamingServer(address, StreamingHandler)
+    server.serve_forever()
+            
+    #finally :
+    #camera.stop_recording()
     return
 
-'''
+
+
 class StreamingOutput(object):
     
     def __init__(self):
@@ -78,20 +175,11 @@ class StreamingOutput(object):
             self.buffer.seek(0)
         return self.buffer.write(buf)
 
+
+
 class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path == '/':
-            self.send_response(301)
-            self.send_header('Location', '/index.html')
-            self.end_headers()
-        elif self.path == '/index.html':
-            content = PAGE.encode('utf-8')
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html')
-            self.send_header('Content-Length', len(content))
-            self.end_headers()
-            self.wfile.write(content)
-        elif self.path == '/stream.mjpg':
+        if self.path == '/stream.mjpg':
             self.send_response(200)
             self.send_header('Age', 0)
             self.send_header('Cache-Control', 'no-cache, private')
@@ -103,6 +191,9 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
                     with output.condition:
                         output.condition.wait()
                         frame = output.frame
+                    # do not stream frame if camPreview is not enabled
+                    if not camPreviewEnabled:
+                        continue
                     self.wfile.write(b'--FRAME\r\n')
                     self.send_header('Content-Type', 'image/jpeg')
                     self.send_header('Content-Length',len(frame))
@@ -120,8 +211,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
 class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
     allow_reuse_address = True
     daemon_threads = True
-    
-
+'''
 
 with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
     output = StreamingOutput()
@@ -135,7 +225,7 @@ with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
             
     finally :
         camera.stop_recording()
- '''       
+'''    
 
 
 if __name__=='__main__':
