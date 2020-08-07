@@ -187,15 +187,15 @@ def gen():
         else:
              break
      
-    
+'''    
 @app.route('/stream.mjpg', methods=["GET"])
 def camera_preview():
     global camPreviewEnabled
     
     if camPreviewEnabled:
-        #output = StreamingOutput()
-        #camera.start_recording(output, format='mjpeg')
-        resp = Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
+        output = StreamingOutput()
+        camera.start_recording(output, format='mjpeg')
+        resp = Response(gen(output), mimetype='multipart/x-mixed-replace; boundary=frame')
         return resp
 '''
 class StreamingHandler(server.BaseHTTPRequestHandler):
@@ -227,7 +227,7 @@ class StreamingHandler(server.BaseHTTPRequestHandler):
             self.end_headers()
 
 
-
+'''
 class StreamingOutput(object):
     
     def __init__(self):
@@ -258,13 +258,5 @@ if __name__=='__main__':
     #cameraPreview = threading.Thread(target=camera_preview, args=())
     #cameraPreview.start()
 
-    output = StreamingOutput()
-    camera.start_recording(output, format='mjpeg')
-    try:
-        address = ('0.0.0.0', 81)
-        server = StreamingServer(address, StreamingHandler)
-        server.serve_forever()
-            
-    finally :
-        camera.stop_recording()
+
     app.run()
