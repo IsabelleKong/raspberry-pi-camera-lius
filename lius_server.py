@@ -161,7 +161,7 @@ def stop_camera():
 
 
 def gen(output):
-    
+    yield (b'Content-Type: multipart/x-mixed-replace; boundary=FRAME\r\n\r\n')
     while True:
         with output.condition:
             output.condition.wait()
@@ -173,7 +173,7 @@ def gen(output):
                 break
             '''
             yield (b'--FRAME\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+                   b'Content-Type: image/jpeg\r\n' + frame + b'\r\n')
 '''
 def gen():
     cam = cv2.VideoCapture(0)
@@ -193,10 +193,16 @@ def camera_preview():
     global camPreviewEnabled
     
     if camPreviewEnabled:
+        #TO CHANGE
+        camPreviewEnabled = False
         output = StreamingOutput()
         camera.start_recording(output, format='mjpeg')
-        resp = Response(gen(output), mimetype='multipart/x-mixed-replace; boundary=frame')
+        resp = Response(gen(output), mimetype='multipart/x-mixed-replace; boundary=FRAME')
+        resp.headers['Content-Type'] = 'multipart/x-mixed-replace; boundary=FRAME'
+        resp.headers['Age'] = 0
+        resp.headers['Pragma'] = 'no-cache'
         return resp
+    return jsonify(data), 200
 '''
 class StreamingHandler(server.BaseHTTPRequestHandler):
     def do_GET(self):
