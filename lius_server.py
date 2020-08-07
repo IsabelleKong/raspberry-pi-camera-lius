@@ -1,32 +1,36 @@
 #!/usr/bin/python
-from flask import Flask
-#from flask_api import FlaskAPI 
+from flask import Flask, Response, jsonify 
 from picamera import PiCamera
 from time import sleep
 import RPi.GPIO as GPIO
 import time
 import threading
 import os
+import sys
+import cv2
 
 import io
 import picamera
 import logging
-#import SocketServer
+import socketserver
 from threading import Condition
-#from http import server
+from http import server
 from picamera import PiCamera
 from time import sleep
 from signal import pause
+
 
 camera = PiCamera()
 #camera.rotation = 180
 # see if security camera is currently recording
 camIsRecording = False
 # see if security camera preview is currently enabled
-camPreviewEnabled = False
-output = StreamingOutput()
+camPreviewEnabled = True
+data = {"status": "ok"}
+
 
 # set up GPIO settings
+GPIO.setwarnings(False)
 GPIO.setmode(GPIO.BOARD)
 # set pin numbers
 PWMA = 22
@@ -59,13 +63,14 @@ app=Flask(__name__)
 
 @app.route('/take_photo',methods=["GET"])  
 def take_picture():
+    if camPreviewEnabled:
+        camera.stop_recording()
+
     timeStr = time.strftime("%Y%m%d-%H%M%S")
     camera.capture('/home/pi/Desktop/image_%s.jpeg' % timeStr)
-    return "success!"
-
-@app.route('/stop_camera',methods=["GET"])  
-def stop_camera():
-    camera.stop_preview()
+    
+    if camPreviewEnabled:
+        start_camera()
     return "success!"
 
     
@@ -77,6 +82,7 @@ def start_recording():
     camera.start_recording('/home/pi/Desktop/video_%s.h264' % timeStr)
     camIsRecording = True
     return "success!"
+
 
 @app.route('/stop_recording',methods=["GET"])  
 def stop_recording(): 
@@ -138,28 +144,58 @@ def reverse():
 def start_camera():
     global camPreviewEnabled
 
-    camPreviewEnabled = True
-    return "success!"
+    if not camPreviewEnabled:
+        camPreviewEnabled = True
+    return jsonify(data), 200
 
 
 @app.route('/stop_camera',methods=["GET"])  
 def stop_camera():
     global camPreviewEnabled
     
-    camPreviewEnabled = False
-    return "success!"
+    if camPreviewEnabled:
+        camPreviewEnabled = False
+        camera.stop_recording()
+    return jsonify(data), 200
 
-
-def camera_preview():
-    camera.start_recording(output, format='mjpg')
-    address = ('', 80)
-    server = StreamingServer(address, StreamingHandler)
-    server.serve_forever()
+'''
+def gen(output):
+    
+    while True:
+        with output.condition:
+            output.condition.wait()
+            frame = output.frame
             
-    #finally :
-    #camera.stop_recording()
-    return
-
+            # do not stream frame if camPreview is not enabled
+            if not camPreviewEnabled:
+                break
+            
+            yield (b'--FRAME\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+'''
+def gen():
+    cam = cv2.VideoCapture(0)
+    while True:
+        ret, img = cam.read()
+        
+        if ret:
+            frame = cv2.imencode('.jpg', img)[1].tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+        else:
+             break
+        
+    
+@app.route('/stream.mjpg', methods=["GET"])
+def camera_preview():
+    global camPreviewEnabled
+    
+    if camPreviewEnabled:
+        #output = StreamingOutput()
+        #camera.start_recording(output, format='mjpeg')
+        resp = Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
+        return resp
+   
 
 
 class StreamingOutput(object):
@@ -181,41 +217,6 @@ class StreamingOutput(object):
         return self.buffer.write(buf)
 
 
-
-class StreamingHandler(server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/stream.mjpg':
-            self.send_response(200)
-            self.send_header('Age', 0)
-            self.send_header('Cache-Control', 'no-cache, private')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
-            self.end_headers()
-            try:
-                while True:
-                    with output.condition:
-                        output.condition.wait()
-                        frame = output.frame
-                    # do not stream frame if camPreview is not enabled
-                    if not camPreviewEnabled:
-                        continue
-                    self.wfile.write(b'--FRAME\r\n')
-                    self.send_header('Content-Type', 'image/jpeg')
-                    self.send_header('Content-Length',len(frame))
-                    self.end_headers()
-                    self.wfile.write(frame)
-                    self.wfile.write(b'\r\n')
-            except Exception as e:
-                logging.warning(
-                    'Removed streaming client %s: %s',
-                    self.client_address, str(e))
-        else:
-            self.send_error(404)
-            self.end_headers()
-
-class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
-    allow_reuse_address = True
-    daemon_threads = True
 '''
 
 with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
@@ -235,6 +236,6 @@ with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
 
 if __name__=='__main__':
     #start a new thread for the camera preview
-    cameraPreview = threading.Thread(target=camera_preview, args=())
-    cameraPreview.start()
+    #cameraPreview = threading.Thread(target=camera_preview, args=())
+    #cameraPreview.start()
     app.run()

@@ -4,7 +4,7 @@
 </head>
 <body>
 <center><h1>Raspberry Pi - Water Trashbin Monitoring </h1></center> 
-<center><img src="stream.mjpg" width="640" height="480"></center>
+<center><img src="http://localhost:80/stream.mjpg" width="640" height="480"></center>
 </body>
 </html>
 
@@ -14,6 +14,8 @@
     <button type="submit" >Start Recording Video</button>
     <button formaction="http://localhost:80/stop_recording" type="submit">Stop Recording Video</button>
     <button formaction="http://localhost:80/take_photo" type="submit">Capture Image</button>
+    <button formaction="http://localhost:80/start_camera" type="submit">Start preview</button>
+    <button formaction="http://localhost:80/stop_camera" type="submit">Stop preview</button>	
 </form>
 
 
