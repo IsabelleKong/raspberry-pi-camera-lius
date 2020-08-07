@@ -159,18 +159,19 @@ def stop_camera():
         camera.stop_recording()
     return jsonify(data), 200
 
-'''
+
 def gen(output):
     
     while True:
         with output.condition:
             output.condition.wait()
             frame = output.frame
-            
+
+            '''
             # do not stream frame if camPreview is not enabled
             if not camPreviewEnabled:
                 break
-            
+            '''
             yield (b'--FRAME\r\n'
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 '''
@@ -185,7 +186,7 @@ def gen():
                    b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
         else:
              break
-        
+     
     
 @app.route('/stream.mjpg', methods=["GET"])
 def camera_preview():
@@ -196,7 +197,35 @@ def camera_preview():
         #camera.start_recording(output, format='mjpeg')
         resp = Response(gen(), mimetype='multipart/x-mixed-replace; boundary=frame')
         return resp
-   
+'''
+class StreamingHandler(server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/stream.mjpg':
+            self.send_response(200)
+            self.send_header('Age', 0)
+            self.send_header('Cache-Control', 'no-cache, private')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
+            self.end_headers()
+            try:
+                while True:
+                    with output.condition:
+                        output.condition.wait()
+                        frame = output.frame
+                    self.wfile.write(b'--FRAME\r\n')
+                    self.send_header('Content-Type', 'image/jpeg')
+                    self.send_header('Content-Length',len(frame))
+                    self.end_headers()
+                    self.wfile.write(frame)
+                    self.wfile.write(b'\r\n')
+            except Exception as e:
+                logging.warning(
+                    'Removed streaming client %s: %s',
+                    self.client_address, str(e))
+        else:
+            self.send_error(404)
+            self.end_headers()
+
 
 
 class StreamingOutput(object):
@@ -218,25 +247,24 @@ class StreamingOutput(object):
         return self.buffer.write(buf)
 
 
-'''
 
-with picamera.PiCamera(resolution='640x480', framerate=24) as camera:
-    output = StreamingOutput()
-    #Uncomment the next line to change your Pi's Camera rotation (in degrees)
-    #camera.rotation = 90
-    camera.start_recording(output, format='mjpeg')
-    try:
-        address = ('', 8000)
-        server = StreamingServer(address, StreamingHandler)
-        server.serve_forever()
-            
-    finally :
-        camera.stop_recording()
-'''    
+class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
+    allow_reuse_address = True
+    daemon_threads = True
 
 
 if __name__=='__main__':
     #start a new thread for the camera preview
     #cameraPreview = threading.Thread(target=camera_preview, args=())
     #cameraPreview.start()
+
+    output = StreamingOutput()
+    camera.start_recording(output, format='mjpeg')
+    try:
+        address = ('0.0.0.0', 81)
+        server = StreamingServer(address, StreamingHandler)
+        server.serve_forever()
+            
+    finally :
+        camera.stop_recording()
     app.run()
