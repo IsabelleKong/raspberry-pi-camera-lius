@@ -7,8 +7,7 @@ import time
 import threading
 import os
 import sys
-sys.path.append('/usr/local/lib/python2.7/site-packages')
-import cv2
+
 
 import io
 import picamera
@@ -28,6 +27,7 @@ camIsRecording = False
 # see if security camera preview is currently enabled
 camPreviewEnabled = True
 data = {"status": "ok"}
+
 
 
 # set up GPIO settings
@@ -110,9 +110,25 @@ def right():
     reset_pins()
     return "success!"
 
+@app.route('/conveyor_on',methods=["GET"])  
+def conveyor_on():
+    #GPIO.output(STBY, GPIO.HIGH)
+    time.sleep(5)
+    reset_pins()
+    return "success!"
+
+
+@app.route('/conveyor_off',methods=["GET"])  
+def conveyor_off():
+    #GPIO.output(STBY, GPIO.HIGH)
+    time.sleep(5)
+    reset_pins()
+    return "success!"
+
 
 @app.route('/forward',methods=["GET"])  
 def forward():
+    
     #GPIO.output(STBY, GPIO.HIGH)
     GPIO.output(AIN1,GPIO.HIGH)
     GPIO.output(AIN2,GPIO.LOW)
@@ -141,6 +157,7 @@ def reverse():
     return "success!"
 
 
+
 @app.route('/start_camera',methods=["GET"])  
 def start_camera():
     global camPreviewEnabled
@@ -160,104 +177,6 @@ def stop_camera():
     return jsonify(data), 200
 
 
-def gen(output):
-    yield (b'Content-Type: multipart/x-mixed-replace; boundary=FRAME\r\n\r\n')
-    while True:
-        with output.condition:
-            output.condition.wait()
-            frame = output.frame
-
-            '''
-            # do not stream frame if camPreview is not enabled
-            if not camPreviewEnabled:
-                break
-            '''
-            yield (b'--FRAME\r\n'
-                   b'Content-Type: image/jpeg\r\n' + frame + b'\r\n')
-'''
-def gen():
-    cam = cv2.VideoCapture(0)
-    while True:
-        ret, img = cam.read()
-        
-        if ret:
-            frame = cv2.imencode('.jpg', img)[1].tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        else:
-             break
-     
-'''    
-@app.route('/stream.mjpg', methods=["GET"])
-def camera_preview():
-    global camPreviewEnabled
-    
-    if camPreviewEnabled:
-        #TO CHANGE
-        camPreviewEnabled = False
-        output = StreamingOutput()
-        camera.start_recording(output, format='mjpeg')
-        resp = Response(gen(output), mimetype='multipart/x-mixed-replace; boundary=FRAME')
-        resp.headers['Content-Type'] = 'multipart/x-mixed-replace; boundary=FRAME'
-        resp.headers['Age'] = 0
-        resp.headers['Pragma'] = 'no-cache'
-        return resp
-    return jsonify(data), 200
-'''
-class StreamingHandler(server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/stream.mjpg':
-            self.send_response(200)
-            self.send_header('Age', 0)
-            self.send_header('Cache-Control', 'no-cache, private')
-            self.send_header('Pragma', 'no-cache')
-            self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=FRAME')
-            self.end_headers()
-            try:
-                while True:
-                    with output.condition:
-                        output.condition.wait()
-                        frame = output.frame
-                    self.wfile.write(b'--FRAME\r\n')
-                    self.send_header('Content-Type', 'image/jpeg')
-                    self.send_header('Content-Length',len(frame))
-                    self.end_headers()
-                    self.wfile.write(frame)
-                    self.wfile.write(b'\r\n')
-            except Exception as e:
-                logging.warning(
-                    'Removed streaming client %s: %s',
-                    self.client_address, str(e))
-        else:
-            self.send_error(404)
-            self.end_headers()
-
-
-'''
-class StreamingOutput(object):
-    
-    def __init__(self):
-        self.frame = None
-        self.buffer = io.BytesIO()
-        self.condition = Condition()
-
-    def write(self, buf):
-        if buf.startswith(b'\xff\xd8'):
-            # New frame, copy the existing buffer's content and notify all
-            # clients it's available
-            self.buffer.truncate()
-            with self.condition:
-                self.frame = self.buffer.getvalue()
-                self.condition.notify_all()
-            self.buffer.seek(0)
-        return self.buffer.write(buf)
-
-
-
-class StreamingServer(socketserver.ThreadingMixIn, server.HTTPServer):
-    allow_reuse_address = True
-    daemon_threads = True
-
 
 if __name__=='__main__':
     #start a new thread for the camera preview
@@ -266,3 +185,4 @@ if __name__=='__main__':
 
 
     app.run()
+    
