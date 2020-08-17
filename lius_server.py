@@ -20,7 +20,11 @@ from time import sleep
 from signal import pause
 
 
+print("START")
+
+
 camera = PiCamera()
+print("start code")
 #camera.rotation = 180
 # see if security camera is currently recording
 camIsRecording = False
@@ -28,37 +32,85 @@ camIsRecording = False
 camPreviewEnabled = True
 data = {"status": "ok"}
 
-
+print("camera setup")
 
 # set up GPIO settings
-GPIO.setwarnings(False)
-GPIO.setmode(GPIO.BOARD)
-# set pin numbers
-PWMA = 22
-AIN2 = 18
-AIN1 = 16
-#STBY = 
-BIN2 = 21
-BIN1 = 23
-PWMB = 19
-GPIO.setup(PWMA , GPIO.OUT) # PWMA
-GPIO.setup(AIN2, GPIO.OUT) # AIN2
-GPIO.setup(AIN1, GPIO.OUT) # AIN1
-#GPIO.setup(STBY, GPIO.OUT) # STBY
-GPIO.setup(BIN2, GPIO.OUT) # BIN2
-GPIO.setup(BIN1, GPIO.OUT) # BIN1
-GPIO.setup(PWMB, GPIO.OUT) # PWMB
+#GPIO.setwarnings(False)
+#GPIO.setmode(GPIO.BOARD)
+GPIO.setmode (GPIO.BCM)
+GPIO.setup(16,GPIO.OUT)
+
+motor1=13 #pin in motor 1
+motor2=12 #pin in motor 2
+motorCommand = ''
+
+print("gpio setup1")
+
+GPIO.setup(motor1,GPIO.OUT)
+pwm1= GPIO.PWM(motor1,1000)
+pwm1.start(0)
 
 
-def reset_pins():
-    GPIO.output(PWMA, GPIO.LOW) # Set PWMA
-    GPIO.output(AIN2, GPIO.LOW) # Set AIN2
-    GPIO.output(AIN1, GPIO.LOW) # Set AIN1
-    #GPIO.output(STBY, GPIO.LOW) # Set STBY
-    GPIO.output(BIN2, GPIO.LOW) # Set BIN2
-    GPIO.output(BIN1, GPIO.LOW) # Set BIN1
-    GPIO.output(PWMB, GPIO.LOW) # Set PWMB
+
+GPIO.setup(motor2,GPIO.OUT)
+pwm2= GPIO.PWM(motor2,1000)
+pwm2.start(0)
+
+print("gpio setup2")
+
+
+def motor_starting():
+    for i in range(0,100):
+        print(str(i))
+        pwm1.ChangeDutyCycle(i)
+        pwm2.ChangeDutyCycle(i)
+        sleep(0.1)       
+   
+
+def stop1():
+    print("STOP1")
+    pwm1.ChangeDutyCycle(40)
+    return
+
+def maju1():
+    print("MAJU1")
+    pwm1.ChangeDutyCycle(90)
+    return
     
+def stop2():
+    print("STOP2")
+    pwm2.ChangeDutyCycle(40)
+    return
+ 
+def maju2():
+    print("MAJU2")
+    pwm2.ChangeDutyCycle(99)
+    return
+   
+   
+def motor():
+    global motorCommand
+    while True:
+        sleep(0.1)
+        if motorCommand=="W":
+            maju1() #Untuk MAJU motor 1
+            maju2() #Untuk MAJU motor 2
+        elif motorCommand=="A":
+            stop2() #Untuk STOP motor 2
+            maju1() #Untuk MAJU motor 1
+        elif motorCommand=="D":
+            maju2() #Untuk MAJU motor 2
+            stop1() #Untuk STOP motor 1  
+        elif motorCommand=="S":
+            stop1() #Untuk STOP motor 1
+            stop2() #Untuk STOP motor 2
+             
+        elif motorCommand=="ON":       #Untuk Hidup Conveyor
+            GPIO.output(16,True)
+            print ("Conveyor ON")
+        elif motorCommand=="OFF":      #Untuk Hidup Conveyor
+            GPIO.output(16,False)
+            print ("Conveyor OFF")
 
 app=Flask(__name__)
 
@@ -72,7 +124,7 @@ def take_picture():
     
     if camPreviewEnabled:
         start_camera()
-    return "success!"
+    return jsonify(data), 200
 
     
 @app.route('/start_recording',methods=["GET"])  
@@ -82,7 +134,7 @@ def start_recording():
     timeStr = time.strftime("%Y%m%d-%H%M%S")
     camera.start_recording('/home/pi/Desktop/video_%s.h264' % timeStr)
     camIsRecording = True
-    return "success!"
+    return jsonify(data), 200
 
 
 @app.route('/stop_recording',methods=["GET"])  
@@ -92,97 +144,61 @@ def stop_recording():
     if camIsRecording:
         camera.stop_recording()
         camIsRecording = False
-    return "success!"
+    return jsonify(data), 200
 
 
 @app.route('/left',methods=["GET"])  
 def left():
-    #GPIO.output(STBY, GPIO.HIGH)
-    time.sleep(5)
-    reset_pins()
-    return "success!"
+    global motorCommand
+    motorCommand = 'A'
+    return jsonify(data), 200
 
 
 @app.route('/right',methods=["GET"])  
 def right():
-    #GPIO.output(STBY, GPIO.HIGH)
-    time.sleep(5)
-    reset_pins()
-    return "success!"
+    global motorCommand
+    motorCommand = 'D'
+    return jsonify(data), 200
 
 @app.route('/conveyor_on',methods=["GET"])  
 def conveyor_on():
-    #GPIO.output(STBY, GPIO.HIGH)
-    time.sleep(5)
-    reset_pins()
-    return "success!"
+    global motorCommand
+    motorCommand = 'ON'
+    return jsonify(data), 200
 
 
 @app.route('/conveyor_off',methods=["GET"])  
 def conveyor_off():
-    #GPIO.output(STBY, GPIO.HIGH)
-    time.sleep(5)
-    reset_pins()
-    return "success!"
+    global motorCommand
+    motorCommand = 'OFF'
+    return jsonify(data), 200
 
 
 @app.route('/forward',methods=["GET"])  
 def forward():
-    
-    #GPIO.output(STBY, GPIO.HIGH)
-    GPIO.output(AIN1,GPIO.HIGH)
-    GPIO.output(AIN2,GPIO.LOW)
-    GPIO.output(PWMA,GPIO.HIGH)
-    GPIO.output(BIN1,GPIO.HIGH)
-    GPIO.output(BIN2,GPIO.LOW)
-    GPIO.output(PWMB,GPIO.HIGH)
-    
-    time.sleep(5)
-    reset_pins()
-    return "success!"
+    global motorCommand
+    motorCommand = 'W'
+    return jsonify(data), 200
 
 
 @app.route('/reverse',methods=["GET"])  
 def reverse():
-    #GPIO.output(STBY, GPIO.HIGH)
-    GPIO.output(AIN1,GPIO.LOW)
-    GPIO.output(AIN2,GPIO.HIGH)
-    GPIO.output(PWMA,GPIO.HIGH)
-    GPIO.output(BIN1,GPIO.LOW)
-    GPIO.output(BIN2,GPIO.HIGH)
-    GPIO.output(PWMB,GPIO.HIGH)
-    
-    time.sleep(5)
-    reset_pins()
-    return "success!"
-
-
-
-@app.route('/start_camera',methods=["GET"])  
-def start_camera():
-    global camPreviewEnabled
-
-    if not camPreviewEnabled:
-        camPreviewEnabled = True
-    return jsonify(data), 200
-
-
-@app.route('/stop_camera',methods=["GET"])  
-def stop_camera():
-    global camPreviewEnabled
-    
-    if camPreviewEnabled:
-        camPreviewEnabled = False
-        camera.stop_recording()
+    global motorCommand
+    motorCommand = 'S'
     return jsonify(data), 200
 
 
 
-if __name__=='__main__':
-    #start a new thread for the camera preview
-    #cameraPreview = threading.Thread(target=camera_preview, args=())
-    #cameraPreview.start()
 
 
-    app.run()
+
+#if __name__=='__main__':
+    
+ #start a new thread for the motor
+motor_starting()
+motor_thread = threading.Thread(target=motor, args=())
+motor_thread.start()
+
+
+app.run()
     
